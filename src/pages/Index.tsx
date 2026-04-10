@@ -386,6 +386,30 @@ const Index = () => {
       }
     }
 
+    // Pass 3: for text-field requirements still not satisfied, verify the new
+    // (edited) label's actual extracted value against the LRF requirement.
+    // This handles the case where both labels already match the requested value
+    // (0 diff detected) — proof reading should confirm the new label IS correct,
+    // not just that a change occurred.
+    //   Modified / Added → child label must have the expected value
+    //   Deleted          → child label must NOT have the field
+    const childFields: Record<string, string> = result.child_fields || {};
+    for (const req of requirements) {
+      if (reqFoundIds.has(req.attrId)) continue;
+      if (req.category !== "Text") continue;
+      const ev = req.expectedValue.toLowerCase().trim();
+      const fieldVal = childFields[req.attrId];
+      if (req.changeType === "Modified" || req.changeType === "Added") {
+        if (ev && fieldVal && fieldVal.toLowerCase().includes(ev)) {
+          reqFoundIds.add(req.attrId);
+        }
+      } else if (req.changeType === "Deleted") {
+        if (!fieldVal) {
+          reqFoundIds.add(req.attrId);
+        }
+      }
+    }
+
     // Enrich parsedItems with isValid flag
     const validatedParsedItems = parsedItems.map(pi => ({
       ...pi,
