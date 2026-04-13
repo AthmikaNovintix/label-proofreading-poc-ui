@@ -76,4 +76,26 @@
   tr, td, th, .report-no-break {
     page-break-inside: avoid;
   }
+
+  /* Label preview print utilities */
+  .print-break-before { page-break-before: always; }
+
+  /* Allow tall requirement tables to flow naturally across print pages */
+  .print-table-flow {
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+    break-before: auto !important;
+    overflow: visible !important;
+  }
+  .print-table-flow table,
+  .print-table-flow tbody,
+  .print-table-flow tr {
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  /* Bounding-box annotation rendering in print */
+  .bb-box        { border-width: 0.75px !important; }
+  .bb-label      { font-size: 4.7px !important; }
+  .bb-label-wrap { transform: translateY(-100%) !important; }
 }

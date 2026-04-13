@@ -40,12 +40,16 @@ export function ReportHeader({ activeScenario, onScenarioChange, reportId: propR
 
   const handleBack = () => {
     const s = location.state;
-    // Navigate back to /compare with all state restored so the page doesn't re-run analysis
+    // If we came from the SetupForm (/label-preview), go back there
+    if (s?.setupFormData) {
+      navigate('/label-preview', { state: s });
+      return;
+    }
+    // Otherwise restore the compare page state so it doesn't re-run analysis
     navigate('/compare', {
       state: {
         formData:     s?.formData,
         submissionId: s?.submissionId,
-        // Index.tsx expects File[] for both; report stores single File or null
         baseFile:     s?.baseFile  ? [s.baseFile]  : [],
         childFile:    s?.childFile ? [s.childFile] : [],
         apiResults:   s?.apiResults  ?? [],
@@ -63,7 +67,7 @@ export function ReportHeader({ activeScenario, onScenarioChange, reportId: propR
     style.textContent = `
       @page {
         size: A4 portrait;
-        margin: 14mm 12mm 18mm 12mm;
+        margin: 8mm 8mm 20mm 8mm;
         @top-left   { content: "LPR: ${reportId}"; font-size: 7pt; color: #888; font-family: sans-serif; }
         @top-center { content: "Page " counter(page); font-size: 7pt; color: #888; font-family: sans-serif; }
         @top-right  { content: "${dateStr} ${timeStr}"; font-size: 7pt; color: #888; font-family: sans-serif; }
@@ -76,38 +80,18 @@ export function ReportHeader({ activeScenario, onScenarioChange, reportId: propR
 
         /* Remove max-width constraint so content fills the A4 page */
         .report-content-wrap { max-width: none !important; padding-left: 0 !important; padding-right: 0 !important; }
+        .report-banner-inner { max-width: none !important; }
 
-        /* Banner: force background colour + bigger title */
+        /* Banner: preserve background colour, use natural screen sizing */
         .report-banner {
-          padding: 28px 32px !important;
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
-        }
-        .report-banner-title {
-          font-size: 26pt !important;
-          font-weight: 700 !important;
-          line-height: 1.25 !important;
-          letter-spacing: -0.01em !important;
-        }
-        .report-banner-id {
-          font-size: 9pt !important;
-          margin-top: 6px !important;
-        }
-        .report-banner-logo {
-          height: 36px !important;
-          width: auto !important;
-        }
-
-        /* Metadata bar */
-        .report-metadata-bar {
-          font-size: 9pt !important;
         }
 
         /* Hard page breaks between major sections */
         .report-page-break { page-break-before: always !important; break-before: page !important; }
 
-        /* Keep label header + image together on one page.
-           Use absolute mm so the cap is reliable regardless of viewport. */
+        /* Keep label images together on one page */
         .report-label-page {
           page-break-inside: avoid !important;
           break-inside: avoid !important;
@@ -125,8 +109,8 @@ export function ReportHeader({ activeScenario, onScenarioChange, reportId: propR
         .report-section-header { page-break-after: avoid; }
 
         /* Full-width tables */
-        table { width: 100% !important; font-size: 8.5pt !important; }
-        th, td { padding: 5px 7px !important; }
+        table { width: 100% !important; }
+        th, td { padding: 4px 6px !important; }
 
         /* Badge spans */
         span[class*="inline-block"] {
@@ -144,14 +128,11 @@ export function ReportHeader({ activeScenario, onScenarioChange, reportId: propR
   };
 
   return (
-    <header
-      className="report-banner w-full"
-      style={{ backgroundColor: theme.primary, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' } as React.CSSProperties}
-    >
-      {/* ── On-screen nav bar — hidden when printing ──────────── */}
+    <>
+      {/* ── Sticky nav bar (page-level, always visible) ───────── */}
       <div
-        className="print:hidden border-b px-6 flex items-center justify-between"
-        style={{ minHeight: 52, borderColor: 'rgba(255,255,255,0.15)' }}
+        className="print:hidden w-full sticky top-0 z-40 border-b px-6 flex items-center justify-between"
+        style={{ minHeight: 52, backgroundColor: theme.primary, borderColor: 'rgba(255,255,255,0.15)' }}
       >
         {/* Left: back + brand */}
         <div className="flex items-center gap-4 h-[52px]">
@@ -196,14 +177,21 @@ export function ReportHeader({ activeScenario, onScenarioChange, reportId: propR
         </div>
       </div>
 
-      {/* ── Print / report banner ─────────────────────────────── */}
-      <div className="report-content-wrap max-w-[1600px] mx-auto px-8 py-6 flex items-center justify-between">
-        <div className="space-y-1.5">
-          <h1 className="report-banner-title text-white text-2xl font-bold tracking-tight">LabelX Proofreading Report</h1>
-          <div className="report-banner-id text-white/80 text-xs">Report ID: {reportId}</div>
+      {/* ── Report banner (scrolls away) ──────────────────────── */}
+      <header
+        className="report-banner w-full"
+        style={{ backgroundColor: theme.primary, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' } as React.CSSProperties}
+      >
+        <div className="report-banner-inner max-w-[1600px] mx-auto px-8 py-5 flex items-start justify-between">
+          <div className="space-y-1">
+            <h1 className="report-banner-title text-white text-2xl leading-tight">Label Proofing Report</h1>
+            <div className="report-banner-id text-white text-xs">Report ID: {reportId}</div>
+          </div>
+          <div className="flex flex-col items-end gap-2">
+            <img src="/novintix-logo.png" alt="Novintix" className="report-banner-logo h-7 w-auto" />
+          </div>
         </div>
-        <img src="/novintix-logo.png" alt="Novintix" className="report-banner-logo h-8 w-auto" />
-      </div>
-    </header>
+      </header>
+    </>
   );
 }

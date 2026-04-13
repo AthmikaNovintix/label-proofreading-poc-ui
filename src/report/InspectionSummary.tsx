@@ -44,10 +44,11 @@ const defaultData: SummaryData = {
 export function ReportInspectionSummary({ data = defaultData }: InspectionSummaryProps) {
   const { theme } = useTheme();
 
-  const totalDeleted  = Object.values(data.deleted).reduce((a, b) => a + b, 0);
-  const totalAdded    = Object.values(data.added).reduce((a, b) => a + b, 0);
-  const totalModified = Object.values(data.modified).reduce((a, b) => a + b, 0);
-  const totalDiffs    = totalDeleted + totalAdded + totalModified;
+  const totalDeleted   = Object.values(data.deleted).reduce((a, b) => a + b, 0);
+  const totalAdded     = Object.values(data.added).reduce((a, b) => a + b, 0);
+  const totalModified  = Object.values(data.modified).reduce((a, b) => a + b, 0);
+  const totalMisplaced = Object.values(data.misplaced).reduce((a, b) => a + b, 0);
+  const totalDiffs     = totalDeleted + totalAdded + totalModified + totalMisplaced;
 
   const categories = [
     { key: 'deleted'  as const, label: 'Deleted',  color: theme.statusColors.deleted,  count: totalDeleted },
@@ -94,6 +95,11 @@ export function ReportInspectionSummary({ data = defaultData }: InspectionSummar
           </div>
         ))}
       </div>
+      {totalDiffs === 0 && (
+        <div className="mt-4 pt-4 border-t border-gray-200 text-center text-xs font-bold uppercase tracking-widest text-gray-400">
+          No Changes
+        </div>
+      )}
     </div>
   );
 }

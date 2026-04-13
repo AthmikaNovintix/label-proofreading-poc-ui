@@ -602,7 +602,7 @@ const Index = () => {
           )}
         </div>
         <button
-          onClick={() => navigate('/report', {
+          onClick={() => navigate('/label-preview', {
           state: {
             scenario: formData ? 'C' : 'A',
             formData,
@@ -623,7 +623,7 @@ const Index = () => {
           className="flex items-center gap-2 bg-[#d51900] text-white px-8 py-3 text-[13px] font-bold uppercase tracking-widest hover:bg-[#b01300] transition-colors rounded-lg shadow-md"
         >
           <FileText className="w-4 h-4" />
-          Generate Report
+          Preview Report
         </button>
       </div>
     </div>

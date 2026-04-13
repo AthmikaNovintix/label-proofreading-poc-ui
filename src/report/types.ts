@@ -1,5 +1,5 @@
 export type ChangeType = 'Modified' | 'Added' | 'Deleted' | 'Misplaced' | 'Repositioned';
-export type ElementType = 'Text' | 'Symbol' | 'Image';
+export type ElementType = 'Text' | 'Symbol' | 'Barcode' | 'Image';
 
 export interface DrawnBox {
   id: string;
@@ -11,7 +11,7 @@ export interface DrawnBox {
   text?: string;
 }
 
-export type RequirementStatus = 'Match' | 'Unmatch';
+export type RequirementStatus = 'Match' | 'Mismatch';
 
 export interface Requirement {
   id: number;

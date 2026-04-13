@@ -40,7 +40,7 @@ const staticCategories: DiscrepancyCategory[] = [
   },
 ];
 
-export function ReportDiscrepancyDetails({ categories: propCategories }: { categories?: DiscrepancyCategory[] }) {
+export function ReportDiscrepancyDetails({ categories: propCategories, hideTitle = false }: { categories?: DiscrepancyCategory[]; hideTitle?: boolean }) {
   const { theme } = useTheme();
   // propCategories === undefined  →  no analysis data provided, use static demo
   // propCategories === []         →  analysis ran but found no differences
@@ -51,9 +51,9 @@ export function ReportDiscrepancyDetails({ categories: propCategories }: { categ
   if (!isDemo && source.length === 0) {
     return (
       <div className="space-y-4">
-        <h3 className="text-sm uppercase tracking-wide font-bold text-gray-700">Changes made</h3>
-        <div className="bg-white border border-gray-300 px-5 py-6 text-center text-sm text-gray-400 italic">
-          No differences detected.
+        {!hideTitle && <h3 className="text-sm uppercase tracking-wide font-bold text-gray-700">Unexpected Changes</h3>}
+        <div className="bg-white border border-gray-300 px-5 py-6 text-center text-xs font-bold uppercase tracking-widest text-gray-400">
+          No Unexpected Changes
         </div>
       </div>
     );
@@ -80,7 +80,7 @@ export function ReportDiscrepancyDetails({ categories: propCategories }: { categ
 
   return (
     <div className="space-y-4">
-      <h3 className="text-sm uppercase tracking-wide font-bold text-gray-700">Changes made</h3>
+      {!hideTitle && <h3 className="text-sm uppercase tracking-wide font-bold text-gray-700">Unexpected Changes</h3>}
       {categories.map((category) => {
         const isOpen = openSections.has(category.title);
         const grouped = groupByChangeType(category.items);

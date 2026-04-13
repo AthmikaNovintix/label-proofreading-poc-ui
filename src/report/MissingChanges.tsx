@@ -1,7 +1,7 @@
 import { Badge } from './Badge';
 import type { Requirement, RequirementStatus } from './types';
 
-const statusColors: Record<RequirementStatus, string> = { 'Match': '#16a34a', 'Unmatch': '#dc2626' };
+const statusColors: Record<RequirementStatus, string> = { 'Match': '#16a34a', 'Mismatch': '#dc2626' };
 
 const staticRequirements: Requirement[] = [
   { id: 1, elementType: 'Text',   changeType: 'Modified', description: 'Trademark ® change to ™',                               expectedValue: '™',                             actualValue: '™',                             status: 'Match' },
@@ -15,27 +15,63 @@ const staticRequirements: Requirement[] = [
   { id: 9, elementType: 'Image',  changeType: 'Modified', description: 'Add background in the size of the implant (11mm, 7)',     expectedValue: 'Background added (11mm, 7)',     actualValue: 'Background added (11mm, 7)',      status: 'Match' },
 ];
 
-export function MissingChanges({ requirements }: { requirements?: Requirement[] }) {
+interface MissingChangesProps {
+  requirements?: Requirement[];
+  /** summary: #, Element, Change Type, Requirements, Expected (no Actual/Status)
+   *  full: all 7 columns
+   *  unexpected: #, Element, Change Type, Requirements, Actual (no Expected/Status) */
+  mode?: 'summary' | 'full' | 'unexpected';
+  /** @deprecated use mode='summary' */
+  summaryOnly?: boolean;
+  /** When true: hide the "Requirements Summary" bold heading */
+  hideTitle?: boolean;
+  /** When true: hide the "X Requirements" count badge */
+  hideCount?: boolean;
+}
+
+export function MissingChanges({ requirements, mode, summaryOnly = false, hideTitle = false, hideCount = false }: MissingChangesProps) {
   const reqs = requirements ?? staticRequirements;
+
+  const resolved = mode ?? (summaryOnly ? 'summary' : 'full');
+
+  const headers =
+    resolved === 'summary'    ? ['#', 'Element Type', 'Change Type', 'Requirements', 'Expected Value'] :
+    resolved === 'unexpected' ? ['#', 'Element', 'Change Type', 'Requirements', 'Actual'] :
+                                ['#', 'Element Type', 'Change Type', 'Requirements', 'Expected Value', 'Actual Value', 'Status'];
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm uppercase tracking-wide font-bold text-gray-700">Requirements Summary</h3>
-        <div className="flex items-center gap-3 text-xs">
-          <span className="px-2 py-1 bg-gray-100 text-gray-600 font-semibold">{reqs.length} Requirements</span>
-        </div>
+        {!hideTitle && <h3 className="text-sm uppercase tracking-wide font-bold text-gray-700">Requirements Summary</h3>}
+        {!hideCount && <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs font-semibold">{reqs.length} Requirements</span>}
       </div>
       <div className="bg-white border border-gray-300 overflow-hidden">
         <table className="w-full border-collapse text-sm" style={{ tableLayout: 'fixed' }}>
-          <colgroup>
-            <col style={{ width: '3%' }} /><col style={{ width: '11%' }} /><col style={{ width: '15%' }} />
-            <col style={{ width: '26%' }} /><col style={{ width: '19%' }} /><col style={{ width: '18%' }} />
-            <col style={{ width: '8%' }} />
-          </colgroup>
+          {resolved === 'summary' && (
+            <colgroup>
+              <col style={{ width: '4%' }} /><col style={{ width: '12%' }} /><col style={{ width: '16%' }} />
+              <col style={{ width: '40%' }} /><col style={{ width: '28%' }} />
+            </colgroup>
+          )}
+          {resolved === 'unexpected' && (
+            <colgroup>
+              <col style={{ width: '4%' }} /><col style={{ width: '12%' }} /><col style={{ width: '16%' }} />
+              <col style={{ width: '40%' }} /><col style={{ width: '28%' }} />
+            </colgroup>
+          )}
+          {resolved === 'full' && (
+            <colgroup>
+              <col style={{ width: '3%' }} /><col style={{ width: '11%' }} /><col style={{ width: '15%' }} />
+              <col style={{ width: '26%' }} /><col style={{ width: '19%' }} />
+              <col style={{ width: '18%' }} /><col style={{ width: '8%' }} />
+            </colgroup>
+          )}
           <thead>
             <tr className="bg-gray-100 border-b border-gray-300">
-              {['#','Element','Change Type','Requirement','Expected Value','Actual Value','Status'].map((h, i) => (
-                <th key={h} className={`px-2 py-2 text-left text-xs uppercase text-gray-900 font-bold overflow-hidden ${i < 6 ? 'border-r border-gray-200' : ''}`}>{h}</th>
+              {headers.map((h, i) => (
+                <th key={h} className={`px-2 py-2 text-left text-xs uppercase text-gray-900 font-bold overflow-hidden ${i < headers.length - 1 ? 'border-r border-gray-200' : ''}`}>
+                  {h}
+                </th>
               ))}
             </tr>
           </thead>
@@ -48,11 +84,21 @@ export function MissingChanges({ requirements }: { requirements?: Requirement[] 
                   <Badge type={req.changeType as any} />
                 </td>
                 <td className="px-2 py-1.5 border-r border-gray-200 text-gray-900" style={{ wordBreak: 'break-word' }}>{req.description}</td>
-                <td className="px-2 py-1.5 border-r border-gray-200 text-gray-900" style={{ wordBreak: 'break-word' }}>{req.expectedValue}</td>
-                <td className="px-2 py-1.5 border-r border-gray-200 text-gray-900" style={{ wordBreak: 'break-word' }}>{req.actualValue}</td>
-                <td className="px-2 py-1.5">
-                  <span className="text-xs font-semibold" style={{ color: statusColors[req.status] }}>{req.status}</span>
-                </td>
+                {resolved === 'summary' && (
+                  <td className="px-2 py-1.5 text-gray-900" style={{ wordBreak: 'break-word' }}>{req.expectedValue}</td>
+                )}
+                {resolved === 'unexpected' && (
+                  <td className="px-2 py-1.5 text-gray-900" style={{ wordBreak: 'break-word' }}>{req.actualValue}</td>
+                )}
+                {resolved === 'full' && (
+                  <>
+                    <td className="px-2 py-1.5 border-r border-gray-200 text-gray-900" style={{ wordBreak: 'break-word' }}>{req.expectedValue}</td>
+                    <td className="px-2 py-1.5 border-r border-gray-200 text-gray-900" style={{ wordBreak: 'break-word' }}>{req.actualValue}</td>
+                    <td className="px-2 py-1.5">
+                      <span className="text-xs font-semibold" style={{ color: statusColors[req.status] }}>{req.status}</span>
+                    </td>
+                  </>
+                )}
               </tr>
             ))}
           </tbody>
