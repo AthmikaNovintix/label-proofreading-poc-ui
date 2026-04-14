@@ -460,16 +460,11 @@ const Index = () => {
         if (req.category !== "Barcode") continue;
         const bcChangeType = req.changeType === "Deleted" ? "Removed" : req.changeType;
 
-        // bc_1d_barcode / bc_datamatrix narrow the match to a specific barcode type.
-        // All other barcode attributes match any.
-        const isDmAttr = req.attrId === "bc_datamatrix" || req.attrId.startsWith("dm_");
-        const is1dAttr = req.attrId === "bc_1d_barcode";
-        const relevantChanges = barcodeChanges.filter((c: any) => {
-          if (!isDmAttr && !is1dAttr) return true;
-          const bt = (c.barcode_type || "").toLowerCase();
-          const isDm = bt.includes("datamatrix") || bt.includes("data_matrix") || bt.includes("matrix");
-          return isDmAttr ? isDm : !isDm;
-        });
+        // All barcode/datamatrix attributes match any barcode change.
+        // Strict barcode_type filtering is skipped because ZXing type strings
+        // vary (DATA_MATRIX, GS1_128, etc.) and the form category already
+        // captures the user's intent.
+        const relevantChanges = barcodeChanges;
 
         const matchingChange = relevantChanges.find((c: any) => c.change_type === bcChangeType);
         if (matchingChange) {
