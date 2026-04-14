@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Download, RefreshCw, FileText, Activity, AlertCircle, Play, ScanLine, ArrowLeft } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Dropzone from "@/components/Dropzone";
-import VisualDiffViewer from "@/components/VisualDiffViewer";
+import VisualDiffViewer, { type RequirementBox } from "@/components/VisualDiffViewer";
 import DataTables from "@/components/DataTables";
 import ProfileDropdown from "@/components/ProfileDropdown";
 import StepIndicator from "@/components/StepIndicator";
@@ -41,6 +41,8 @@ const Index = () => {
 
   const [progress, setProgress] = useState(0);
   const [selectedResultIndex, setSelectedResultIndex] = useState(0);
+  // Tracks requirement box positions after user drags/resizes/duplicates them in VisualDiffViewer
+  const [adjustedBoxes, setAdjustedBoxes] = useState<RequirementBox[]>([]);
   const [basePreviewUrl, setBasePreviewUrl] = useState<string>("");
   const [childPreviewUrls, setChildPreviewUrls] = useState<string[]>([]);
 
@@ -80,7 +82,7 @@ const Index = () => {
       });
     }, 400);
 
-    const API_URL = import.meta.env.VITE_API_BASE_URL || "https://label-comparator.azurewebsites.net";
+    const API_URL = import.meta.env.VITE_API_BASE_URL || "https://label-comparator.websites.net";
 
     try {
       if (lrfOnly) {
@@ -150,13 +152,14 @@ const Index = () => {
   //   validatedParsedItems — parsedItems enriched with isValid flag (null in lrfOnly)
   //   missingItems         — LRF requirements the AI did NOT find
   //   satisfiedItems       — LRF requirements the AI DID find
-  const { validatedParsedItems, missingItems, satisfiedItems } = useMemo<{
+  const { validatedParsedItems, missingItems, satisfiedItems, requirementBoxes } = useMemo<{
     validatedParsedItems: any[] | undefined;
     missingItems: ProofRequestMissingItem[];
     satisfiedItems: ProofRequestMissingItem[];
+    requirementBoxes: RequirementBox[];
   }>(() => {
     if (!formData || !analysisRun) {
-      return { validatedParsedItems: undefined, missingItems: [], satisfiedItems: [] };
+      return { validatedParsedItems: undefined, missingItems: [], satisfiedItems: [], requirementBoxes: [] };
     }
 
     // ── LRF-only mode ────────────────────────────────────────────────────────
@@ -288,15 +291,15 @@ const Index = () => {
           };
         });
 
-      return { validatedParsedItems: undefined, missingItems, satisfiedItems };
+      return { validatedParsedItems: undefined, missingItems, satisfiedItems, requirementBoxes: [] };
     }
 
     // ── Full diff mode ───────────────────────────────────────────────────────
     if (apiResults.length === 0) {
-      return { validatedParsedItems: undefined, missingItems: [], satisfiedItems: [] };
+      return { validatedParsedItems: undefined, missingItems: [], satisfiedItems: [], requirementBoxes: [] };
     }
     const result = apiResults[selectedResultIndex];
-    if (!result) return { validatedParsedItems: undefined, missingItems: [], satisfiedItems: [] };
+    if (!result) return { validatedParsedItems: undefined, missingItems: [], satisfiedItems: [], requirementBoxes: [] };
 
     const parsedItems: any[] = result.parsedItems ?? [];
 
@@ -537,8 +540,86 @@ const Index = () => {
         actualValue: actualValueMap.get(req.attrId) || "—",
       }));
 
-    return { validatedParsedItems, missingItems, satisfiedItems };
+    // Build draggable requirement boxes for the Visual Diff Viewer.
+    // Use the AI annotation that best matches each requirement as the initial
+    // position so the user only needs a small adjustment, not a full drag.
+    const DEFAULT_W = 0.24;
+    const DEFAULT_H = 0.055;
+    const GAP       = 0.010;
+
+    const aiAnnotations: any[] = apiResults[selectedResultIndex]?.annotations ?? [];
+
+    const usedAnnIdx = new Set<number>();
+    const findAnn = (label: string, changeType: string): any | null => {
+      const words = label.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+      const ct    = changeType.toLowerCase();
+      // First pass: label word match + change type match
+      for (let i = 0; i < aiAnnotations.length; i++) {
+        if (usedAnnIdx.has(i)) continue;
+        const ann = aiAnnotations[i];
+        const al  = ann.label?.toLowerCase() ?? "";
+        const typeOk  = ann.change_type?.toLowerCase() === ct;
+        const labelOk = words.some(w => al.includes(w));
+        if (labelOk && typeOk) { usedAnnIdx.add(i); return ann; }
+      }
+      // Second pass: label only (looser match)
+      for (let i = 0; i < aiAnnotations.length; i++) {
+        if (usedAnnIdx.has(i)) continue;
+        const ann = aiAnnotations[i];
+        const al  = ann.label?.toLowerCase() ?? "";
+        if (words.some(w => al.includes(w))) { usedAnnIdx.add(i); return ann; }
+      }
+      return null;
+    };
+
+    const allReqs = [
+      ...satisfiedItems.map(i => ({ ...i, satisfied: true  as const })),
+      ...missingItems.map(i =>   ({ ...i, satisfied: false as const })),
+    ];
+
+    let fallbackIdx = 0;
+    const requirementBoxes: RequirementBox[] = allReqs.map(item => {
+      const ann = findAnn(item.label, item.expectedChange);
+      if (ann) {
+        return {
+          id:         item.id,
+          label:      item.label,
+          changeType: item.expectedChange,
+          category:   item.category,
+          satisfied:  item.satisfied,
+          x:          ann.x,
+          y:          ann.y,
+          width:      ann.width  > 0 ? ann.width  : DEFAULT_W,
+          height:     ann.height > 0 ? ann.height : DEFAULT_H,
+        };
+      }
+      // No AI annotation match — stack on left edge as fallback
+      const pos: RequirementBox = {
+        id:         item.id,
+        label:      item.label,
+        changeType: item.expectedChange,
+        category:   item.category,
+        satisfied:  item.satisfied,
+        x:          0.01,
+        y:          0.01 + fallbackIdx * (DEFAULT_H + GAP),
+        width:      DEFAULT_W,
+        height:     DEFAULT_H,
+      };
+      fallbackIdx++;
+      return pos;
+    });
+
+    return { validatedParsedItems, missingItems, satisfiedItems, requirementBoxes };
   }, [formData, analysisRun, lrfOnly, lrfAnalysis, apiResults, selectedResultIndex]);
+
+  // Called when user duplicates a requirement box in VisualDiffViewer
+  const handleAddBox = useCallback((newBox: RequirementBox) => {
+    setAdjustedBoxes(prev => {
+      const current = prev.length > 0 ? prev : (requirementBoxes ?? []);
+      if (current.some(b => b.id === newBox.id)) return current;
+      return [...current, newBox];
+    });
+  }, [requirementBoxes]);
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] flex flex-col">
@@ -676,7 +757,16 @@ const Index = () => {
           <VisualDiffViewer
             baseImage={lrfOnly ? undefined : (basePreviewUrl || undefined)}
             childImage={childPreviewUrls[selectedResultIndex] || childPreviewUrls[0] || undefined}
-            annotations={analysisRun && !lrfOnly && apiResults.length > 0 ? apiResults[selectedResultIndex]?.annotations ?? [] : []}
+            annotations={
+              formData
+                ? []
+                : analysisRun && !lrfOnly && apiResults.length > 0
+                  ? apiResults[selectedResultIndex]?.annotations ?? []
+                  : []
+            }
+            requirementBoxes={formData ? (adjustedBoxes.length > 0 ? adjustedBoxes : (requirementBoxes ?? [])) : []}
+            onBoxesChange={formData ? setAdjustedBoxes : undefined}
+            onAddBox={formData ? handleAddBox : undefined}
           />
 
           {/* ── Inspection Summary + Details ── */}
@@ -710,6 +800,8 @@ const Index = () => {
             missingItems,
             satisfiedItems,
             annotations: analysisRun && apiResults.length > 0 ? apiResults[selectedResultIndex]?.annotations ?? [] : [],
+            // User-adjusted requirement box positions (proof-request mode only)
+            requirementBoxes: adjustedBoxes.length > 0 ? adjustedBoxes : (requirementBoxes ?? []),
             baseFile: baseFile[0] ?? null,
             childFile: childFiles[selectedResultIndex] ?? null,
             baseFileName: baseFile[0]?.name ?? '',
