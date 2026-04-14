@@ -54,7 +54,7 @@ function buildRequirements(
       changeType:  item.expectedChange as Requirement['changeType'],
       description: item.label,
       expectedValue: item.expectedValue,
-      actualValue:   item.expectedValue,
+      actualValue:   (item.actualValue && item.actualValue !== '—') ? item.actualValue : item.expectedValue,
       status: 'Match' as const,
     })),
     ...missingItems.map(item => ({
@@ -63,7 +63,7 @@ function buildRequirements(
       changeType:  item.expectedChange as Requirement['changeType'],
       description: item.label,
       expectedValue: item.expectedValue,
-      actualValue:   '— NOT FOUND —',
+      actualValue:   (item.actualValue && item.actualValue !== '—') ? item.actualValue : '— NOT FOUND —',
       status: 'Mismatch' as const,
     })),
   ];
@@ -72,10 +72,13 @@ function buildRequirements(
 function buildDiscrepancyCategories(parsedItems: any[]): DiscrepancyCategory[] {
   const ORDER = ['Text', 'Symbol', 'Barcode', 'Image'];
   const TITLE: Record<string, string> = {
-    Text: 'TEXT', Symbol: 'SYMBOLS', Barcode: 'BARCODES', Image: 'IMAGE',
+    Text: 'TEXT', Symbol: 'SYMBOLS', Barcode: 'BARCODES', DataMatrix: 'BARCODES', Image: 'IMAGE',
   };
   const map: Record<string, { changeType: any; value: string }[]> = {};
   for (const item of parsedItems) {
+    // Skip items that matched an LRF requirement — those belong in Expected Changes,
+    // not in Unexpected Changes. Items without isValid (no form mode) always pass through.
+    if (item.isValid === true) continue;
     const title = TITLE[item.category] ?? item.category.toUpperCase();
     if (!map[title]) map[title] = [];
     map[title].push({ changeType: item.status, value: item.value });

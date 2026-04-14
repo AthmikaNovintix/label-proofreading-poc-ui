@@ -67,7 +67,9 @@ export function ReportDiscrepancyDetails({ categories: propCategories, hideTitle
     return theme.statusColors.repositioned;
   };
 
-  const categories = source.map(c => ({ title: c.title, color: colorForCategory(c.items), items: c.items }));
+  const categories = source
+    .filter(c => c.items.length > 0)
+    .map(c => ({ title: c.title, color: colorForCategory(c.items), items: c.items }));
   const [openSections, setOpenSections] = useState<Set<string>>(new Set(categories.map(c => c.title)));
 
   const toggleSection = (title: string) => {

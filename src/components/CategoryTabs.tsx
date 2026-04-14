@@ -1,5 +1,5 @@
 import { CategoryId } from "@/types/form";
-import { Type, Shield, Barcode, Image, ChevronDown } from "lucide-react";
+import { Type, Shield, Barcode, Image, ChevronDown, QrCode } from "lucide-react";
 
 interface CategoryTabsProps {
   activeCategory: CategoryId | null;
@@ -8,17 +8,18 @@ interface CategoryTabsProps {
 }
 
 const tabConfig: { id: CategoryId; label: string; Icon: any }[] = [
-  { id: "text", label: "Text", Icon: Type },
-  { id: "symbol", label: "Symbols", Icon: Shield },
-  { id: "barcode", label: "Barcodes", Icon: Barcode },
-  { id: "image", label: "Images", Icon: Image },
+  { id: "text",       label: "Text",       Icon: Type    },
+  { id: "symbol",     label: "Symbols",    Icon: Shield  },
+  { id: "barcode",    label: "Barcodes",   Icon: Barcode },
+  { id: "datamatrix", label: "DataMatrix", Icon: QrCode  },
+  { id: "image",      label: "Images",     Icon: Image   },
 ];
 
 const CategoryTabs = ({ activeCategory, changeCounts, onSelect }: CategoryTabsProps) => {
   return (
     <div className="py-4 px-4 relative z-10 bg-white">
       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Select Change Category</p>
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-5 gap-3">
         {tabConfig.map(({ id, label, Icon }) => {
           const isActive = activeCategory === id;
           const count = changeCounts[id];

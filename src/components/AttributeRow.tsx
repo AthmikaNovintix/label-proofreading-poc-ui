@@ -29,11 +29,15 @@ const AttributeRow = ({
   onClear,
 }: AttributeRowProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const isSymbol = categoryId === "symbol";
-  const isImage = categoryId === "image";
-  const isDeleted = changeType === "Deleted";
-  const showUpload = !isDeleted && ((isSymbol && changeType === "Added") || 
+  const isSymbol     = categoryId === "symbol";
+  const isImage      = categoryId === "image";
+  const isBarcode    = categoryId === "barcode";
+  const isDataMatrix = categoryId === "datamatrix";
+  const isDeleted    = changeType === "Deleted";
+  const showUpload = !isDeleted && ((isSymbol && changeType === "Added") ||
                      (isImage && (changeType === "Added" || changeType === "Modified")));
+  // Symbols and Images don't need a free-text expected value (symbols use upload; images use upload).
+  // Barcodes and DataMatrix DO ask for expected value so users can specify the encoded value change.
   const hideExpectedValue = isSymbol || isImage || isDeleted;
 
   const changeTypes = isSymbol ? SYMBOL_CHANGE_TYPES : isImage ? IMAGE_CHANGE_TYPES : CHANGE_TYPES;

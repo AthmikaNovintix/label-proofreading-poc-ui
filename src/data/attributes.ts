@@ -49,6 +49,21 @@ export const CATEGORIES: Record<CategoryId, CategoryDef> = {
       })),
     })),
   },
+  datamatrix: {
+    id: data.categories.datamatrix.id,
+    label: data.categories.datamatrix.label,
+    icon: data.categories.datamatrix.icon,
+    description: data.categories.datamatrix.description,
+    groups: data.categories.datamatrix.groups.map((g: any) => ({
+      id: g.id,
+      name: g.name,
+      attributes: g.attributes.map((a: any) => ({
+        id: a.id,
+        label: a.label,
+        placeholder: a.placeholder,
+      })),
+    })),
+  },
   image: {
     id: data.categories.image.id,
     label: data.categories.image.label,
@@ -66,12 +81,12 @@ export const CATEGORIES: Record<CategoryId, CategoryDef> = {
   },
 };
 
-export const CATEGORY_ORDER: CategoryId[] = ["text", "symbol", "barcode", "image"];
+export const CATEGORY_ORDER: CategoryId[] = ["text", "symbol", "barcode", "datamatrix", "image"];
 
 export const METADATA_FIELDS = data.form_meta.metadata_fields;
 
 const categoryDisplayName: Record<string, "Text" | "Symbol" | "Barcode" | "Image"> = {
-  text: "Text", symbol: "Symbol", barcode: "Barcode", image: "Image",
+  text: "Text", symbol: "Symbol", barcode: "Barcode", datamatrix: "Barcode", image: "Image",
 };
 
 /** Flat lookup: attrId → { label, category } — used to resolve form change IDs in the report */

@@ -14,6 +14,7 @@ export interface ProofRequestMissingItem {
   label: string;
   expectedChange: string;
   expectedValue: string;
+  actualValue?: string; // what was actually detected on the label
 }
 
 export interface FeatureItem {

@@ -217,9 +217,27 @@ const ProofRequestSatisfiedGroup = ({ items }: { items: ProofRequestMissingItem[
                     <CatIcon className="h-3.5 w-3.5 mt-0.5 text-green-600 shrink-0" />
                     <div className="min-w-0">
                       <span className="text-sm text-foreground">{item.label}</span>
-                      <div className="flex items-center gap-1.5 mt-0.5">
+                      <div className="flex items-center flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
                         <span className="text-xs bg-green-50 text-green-700 px-1.5 py-0.5 rounded font-medium">{item.expectedChange}</span>
-                        <span className="font-mono text-xs text-muted-foreground">Expected: <span className="text-foreground">{item.expectedValue}</span></span>
+                        {item.expectedValue && item.expectedValue !== "—" && (
+                          <span className="font-mono text-xs text-muted-foreground">
+                            Expected: <span className="text-foreground">{item.expectedValue}</span>
+                          </span>
+                        )}
+                        {item.actualValue && item.actualValue !== "—" && (
+                          item.actualValue.includes("\n") ? (
+                            <div className="font-mono text-xs text-muted-foreground mt-0.5">
+                              <span className="mr-1">Actual:</span>
+                              {item.actualValue.split("\n").map((line, i) => (
+                                <div key={i} className="ml-2 text-green-700 font-medium">{line}</div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="font-mono text-xs text-muted-foreground">
+                              Actual: <span className="text-green-700 font-medium">{item.actualValue}</span>
+                            </span>
+                          )
+                        )}
                       </div>
                     </div>
                   </div>
@@ -262,9 +280,27 @@ const ProofRequestMissingGroup = ({ items }: { items: ProofRequestMissingItem[] 
                     <CatIcon className="h-3.5 w-3.5 mt-0.5 text-[#D51900] shrink-0" />
                     <div className="min-w-0">
                       <span className="text-sm text-foreground">{item.label}</span>
-                      <div className="flex items-center gap-1.5 mt-0.5">
+                      <div className="flex items-center flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
                         <span className="text-xs bg-[#fce8e6] text-[#D51900] px-1.5 py-0.5 rounded font-medium">{item.expectedChange}</span>
-                        <span className="font-mono text-xs text-muted-foreground">Expected: <span className="text-foreground">{item.expectedValue}</span></span>
+                        {item.expectedValue && item.expectedValue !== "—" && (
+                          <span className="font-mono text-xs text-muted-foreground">
+                            Expected: <span className="text-foreground">{item.expectedValue}</span>
+                          </span>
+                        )}
+                        {item.actualValue && item.actualValue !== "—" && (
+                          item.actualValue.includes("\n") ? (
+                            <div className="font-mono text-xs text-muted-foreground mt-0.5">
+                              <span className="mr-1">Actual:</span>
+                              {item.actualValue.split("\n").map((line, i) => (
+                                <div key={i} className="ml-2 text-[#D51900] font-medium">{line}</div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="font-mono text-xs text-muted-foreground">
+                              Actual: <span className="text-[#D51900] font-medium">{item.actualValue}</span>
+                            </span>
+                          )
+                        )}
                       </div>
                     </div>
                   </div>
@@ -381,9 +417,9 @@ const DiscrepancyDashboard = ({ formData, passedDiscrepancies, missingItems = []
               <ProofRequestMissingGroup items={missingItems} />
             </div>
           )}
-          {statusOrder.map((status) => (
+          {!formData && statusOrder.map((status) => (
             <div key={status} className="py-2 last:pb-0">
-              <StatusGroup status={status} items={grouped[status]} showValidity={!!formData} />
+              <StatusGroup status={status} items={grouped[status]} showValidity={false} />
             </div>
           ))}
         </div>

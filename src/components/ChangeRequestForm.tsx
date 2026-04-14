@@ -128,10 +128,11 @@ const ChangeRequestForm = () => {
   );
 
   const changeCounts: Record<CategoryId, number> = {
-    text: getChangesForCategory("text"),
-    symbol: getChangesForCategory("symbol"),
-    barcode: getChangesForCategory("barcode"),
-    image: getChangesForCategory("image"),
+    text:       getChangesForCategory("text"),
+    symbol:     getChangesForCategory("symbol"),
+    barcode:    getChangesForCategory("barcode"),
+    datamatrix: getChangesForCategory("datamatrix"),
+    image:      getChangesForCategory("image"),
   };
 
   const totalChanges = Object.values(changeCounts).reduce((a, b) => a + b, 0);

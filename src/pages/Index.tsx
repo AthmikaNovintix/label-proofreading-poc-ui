@@ -163,7 +163,9 @@ const Index = () => {
     if (lrfOnly && lrfAnalysis) {
       const CATEGORY_LABEL_TO_AI: Record<string, "Text" | "Symbol" | "Barcode" | "Image"> = {
         "Text": "Text", "Symbols": "Symbol", "Symbol": "Symbol",
-        "Barcodes": "Barcode", "Barcode": "Barcode", "Images": "Image", "Image": "Image",
+        "Barcodes": "Barcode", "Barcode": "Barcode",
+        "DataMatrix": "Barcode", "Datamatrix": "Barcode",
+        "Images": "Image", "Image": "Image",
       };
       const normCat = (label: string) => CATEGORY_LABEL_TO_AI[label] ?? label;
       const norm = (ct: string) => (ct === "Removed" ? "Deleted" : ct);
@@ -226,10 +228,16 @@ const Index = () => {
           const al = req.label.toLowerCase();
 
           if (req.attrId === "rev" && ev) {
-            // Scope revision check to other_text using the "rev <letter>" pattern
-            const otherText = (detectedFieldMap["other_text"] ?? "").toLowerCase();
-            if (otherText && new RegExp(`\\brev[.\\s]*${ev}\\b`).test(otherText)) {
+            // Check the dedicated rev field first (AI extracts just the letter, e.g. "A")
+            const revVal = (detectedFieldMap["rev"] ?? "").toLowerCase().trim();
+            if (revVal && (revVal === ev || revVal.includes(ev))) {
               reqFoundIds.add(req.attrId);
+            } else {
+              // Fallback: check other_text for "rev A" pattern
+              const otherText = (detectedFieldMap["other_text"] ?? "").toLowerCase();
+              if (otherText && new RegExp(`\\brev[.\\s]*${ev}\\b`).test(otherText)) {
+                reqFoundIds.add(req.attrId);
+              }
             }
           } else {
             for (const [fid, fval] of Object.entries(detectedFieldMap)) {
@@ -248,23 +256,37 @@ const Index = () => {
 
       const missingItems: ProofRequestMissingItem[] = requirements
         .filter(req => !reqFoundIds.has(req.attrId))
-        .map((req, i) => ({
-          id: `missing-${i}`,
-          category: req.category as ProofRequestMissingItem["category"],
-          label: req.label,
-          expectedChange: req.changeType,
-          expectedValue: req.expectedValue || "—",
-        }));
+        .map((req, i) => {
+          let actualValue = "—";
+          if (req.category === "Text") {
+            actualValue = detectedFieldMap[req.attrId] || "—";
+          }
+          return {
+            id: `missing-${i}`,
+            category: req.category as ProofRequestMissingItem["category"],
+            label: req.label,
+            expectedChange: req.changeType,
+            expectedValue: req.expectedValue || "—",
+            actualValue,
+          };
+        });
 
       const satisfiedItems: ProofRequestMissingItem[] = requirements
         .filter(req => reqFoundIds.has(req.attrId))
-        .map((req, i) => ({
-          id: `satisfied-${i}`,
-          category: req.category as ProofRequestMissingItem["category"],
-          label: req.label,
-          expectedChange: req.changeType,
-          expectedValue: req.expectedValue || "—",
-        }));
+        .map((req, i) => {
+          let actualValue = "—";
+          if (req.category === "Text") {
+            actualValue = detectedFieldMap[req.attrId] || "—";
+          }
+          return {
+            id: `satisfied-${i}`,
+            category: req.category as ProofRequestMissingItem["category"],
+            label: req.label,
+            expectedChange: req.changeType,
+            expectedValue: req.expectedValue || "—",
+            actualValue,
+          };
+        });
 
       return { validatedParsedItems: undefined, missingItems, satisfiedItems };
     }
@@ -286,13 +308,15 @@ const Index = () => {
     // ("Symbol", "Barcode", "Image"). Centralising the mapping here means adding
     // a new category to the JSON never silently breaks requirement matching.
     const CATEGORY_LABEL_TO_AI: Record<string, "Text" | "Symbol" | "Barcode" | "Image"> = {
-      "Text":    "Text",
-      "Symbols": "Symbol",
-      "Symbol":  "Symbol",
-      "Barcodes":"Barcode",
-      "Barcode": "Barcode",
-      "Images":  "Image",
-      "Image":   "Image",
+      "Text":       "Text",
+      "Symbols":    "Symbol",
+      "Symbol":     "Symbol",
+      "Barcodes":   "Barcode",
+      "Barcode":    "Barcode",
+      "DataMatrix": "Barcode",
+      "Datamatrix": "Barcode",
+      "Images":     "Image",
+      "Image":      "Image",
     };
     const normCat = (label: string): "Text" | "Symbol" | "Barcode" | "Image" =>
       CATEGORY_LABEL_TO_AI[label] ?? (label as "Text" | "Symbol" | "Barcode" | "Image");
@@ -353,6 +377,10 @@ const Index = () => {
 
     const matchedParsedIds = new Set<string>();
     const reqFoundIds = new Set<string>();
+    // Tracks the actual value detected on the label for each requirement (attrId → value)
+    const actualValueMap = new Map<string, string>();
+    // Declared here so Pass 1/2 can use it for accurate Text actual values
+    const childFields: Record<string, string> = result.child_fields || {};
 
     // Pass 1: strict label + value matching
     for (const req of requirements) {
@@ -362,6 +390,12 @@ const Index = () => {
         if (valueMatches(pi.value, pi.newText, pi.oldText, pi.status, req.label, req.expectedValue)) {
           matchedParsedIds.add(pi.id);
           reqFoundIds.add(req.attrId);
+          // For Text requirements prefer the dedicated extracted field value — it is
+          // more precise than parsedItem text which may be a noisy diff string.
+          const textActual = req.category === "Text" && childFields[req.attrId]
+            ? childFields[req.attrId]!
+            : (pi.newText || pi.value);
+          actualValueMap.set(req.attrId, textActual);
           break;
         }
       }
@@ -380,6 +414,7 @@ const Index = () => {
           if (valueMatches(pi.value, pi.newText, pi.oldText, pi.status, req.label, req.expectedValue)) {
             matchedParsedIds.add(pi.id);
             reqFoundIds.add(req.attrId);
+            actualValueMap.set(req.attrId, pi.newText || pi.value);
             break;
           }
         }
@@ -393,7 +428,6 @@ const Index = () => {
     // not just that a change occurred.
     //   Modified / Added → child label must have the expected value
     //   Deleted          → child label must NOT have the field
-    const childFields: Record<string, string> = result.child_fields || {};
     for (const req of requirements) {
       if (reqFoundIds.has(req.attrId)) continue;
       if (req.category !== "Text") continue;
@@ -402,10 +436,53 @@ const Index = () => {
       if (req.changeType === "Modified" || req.changeType === "Added") {
         if (ev && fieldVal && fieldVal.toLowerCase().includes(ev)) {
           reqFoundIds.add(req.attrId);
+          actualValueMap.set(req.attrId, fieldVal);
         }
       } else if (req.changeType === "Deleted") {
         if (!fieldVal) {
           reqFoundIds.add(req.attrId);
+          actualValueMap.set(req.attrId, "—");
+        }
+      }
+    }
+
+    // Pass 4: barcode requirements — matched against barcode_summary.comparison.changes.
+    // Barcodes are NOT in discrepancies/parsedItems; they go through a separate ZXing +
+    // AI-text pipeline that returns barcode_summary alongside the main diff result.
+    // "Modified" is satisfied when any barcode's decoded value OR printed text changed.
+    // "Added" / "Removed" are satisfied when the comparison detected an addition/removal.
+    // DataMatrix is included automatically (barcode_service handles it the same way).
+    {
+      const barcodeChanges: any[] = result.barcode_summary?.comparison?.changes ?? [];
+
+      for (const req of requirements) {
+        if (reqFoundIds.has(req.attrId)) continue;
+        if (req.category !== "Barcode") continue;
+        const bcChangeType = req.changeType === "Deleted" ? "Removed" : req.changeType;
+
+        // bc_1d_barcode / bc_datamatrix narrow the match to a specific barcode type.
+        // All other barcode attributes match any.
+        const isDmAttr = req.attrId === "bc_datamatrix" || req.attrId.startsWith("dm_");
+        const is1dAttr = req.attrId === "bc_1d_barcode";
+        const relevantChanges = barcodeChanges.filter((c: any) => {
+          if (!isDmAttr && !is1dAttr) return true;
+          const bt = (c.barcode_type || "").toLowerCase();
+          const isDm = bt.includes("datamatrix") || bt.includes("data_matrix") || bt.includes("matrix");
+          return isDmAttr ? isDm : !isDm;
+        });
+
+        const matchingChange = relevantChanges.find((c: any) => c.change_type === bcChangeType);
+        if (matchingChange) {
+          reqFoundIds.add(req.attrId);
+          const mc = matchingChange;
+          const oldDec = mc.old_value   || "";
+          const newDec = mc.new_value   || "";
+          const oldPrt = mc.old_printed || "";
+          const newPrt = mc.new_printed || "";
+          const lines: string[] = [];
+          lines.push(`Decoded: ${oldDec || "(none)"} → ${newDec || "(none)"}`);
+          if (oldPrt || newPrt) lines.push(`Printed: ${oldPrt || "(none)"} → ${newPrt || "(none)"}`);
+          actualValueMap.set(req.attrId, lines.join("\n"));
         }
       }
     }
@@ -416,16 +493,42 @@ const Index = () => {
       isValid: matchedParsedIds.has(pi.id),
     }));
 
-    // Build missingItems for requirements the AI didn't find
+    // Build missingItems — for each, try to surface what IS on the label
     const missingItems: ProofRequestMissingItem[] = requirements
       .filter(req => !reqFoundIds.has(req.attrId))
-      .map((req, i) => ({
-        id: `missing-${i}`,
-        category: req.category as ProofRequestMissingItem["category"],
-        label: req.label,
-        expectedChange: req.changeType,
-        expectedValue: req.expectedValue || "—",
-      }));
+      .map((req, i) => {
+        let actualValue = "—";
+        if (req.category === "Text") {
+          actualValue = childFields[req.attrId] || "—";
+        } else if (req.category === "Barcode") {
+          const baseBarcodes: any[]  = result.barcode_summary?.base?.barcode_elements  ?? [];
+          const childBarcodes: any[] = result.barcode_summary?.child?.barcode_elements ?? [];
+          const baseAiPrinted  = result.barcode_summary?.base?.ai_barcode_number  || "";
+          const childAiPrinted = result.barcode_summary?.child?.ai_barcode_number || "";
+          const lines: string[] = [];
+          for (const b of baseBarcodes) {
+            const dec = b.decoded_value      || "";
+            const prt = b.printed_text_below || baseAiPrinted || "";
+            lines.push(`Base decoded:  ${dec || "(none)"}`);
+            lines.push(`Base printed:  ${prt || "(none)"}`);
+          }
+          for (const b of childBarcodes) {
+            const dec = b.decoded_value      || "";
+            const prt = b.printed_text_below || childAiPrinted || "";
+            lines.push(`Child decoded: ${dec || "(none)"}`);
+            lines.push(`Child printed: ${prt || "(none)"}`);
+          }
+          if (lines.length > 0) actualValue = lines.join("\n");
+        }
+        return {
+          id: `missing-${i}`,
+          category: req.category as ProofRequestMissingItem["category"],
+          label: req.label,
+          expectedChange: req.changeType,
+          expectedValue: req.expectedValue || "—",
+          actualValue,
+        };
+      });
 
     // Build satisfiedItems for requirements the AI DID find
     const satisfiedItems: ProofRequestMissingItem[] = requirements
@@ -436,6 +539,7 @@ const Index = () => {
         label: req.label,
         expectedChange: req.changeType,
         expectedValue: req.expectedValue || "—",
+        actualValue: actualValueMap.get(req.attrId) || "—",
       }));
 
     return { validatedParsedItems, missingItems, satisfiedItems };

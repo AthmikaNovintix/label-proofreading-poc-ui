@@ -19,7 +19,7 @@ export interface CategoryDef {
   groups: GroupDef[];
 }
 
-export type CategoryId = "text" | "symbol" | "barcode" | "image";
+export type CategoryId = "text" | "symbol" | "barcode" | "datamatrix" | "image";
 
 export interface ChangeEntry {
   attribute_id: string;

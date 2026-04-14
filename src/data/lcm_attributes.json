@@ -2,8 +2,8 @@
   "form_meta": {
     "title": "Label Comparator — Change Request Input Form",
     "version": "1.0",
-    "description": "130+ attributes across 4 categories for label change request validation against comparator inspection output",
-    "categories": ["text", "symbol", "barcode", "image"],
+    "description": "130+ attributes across 5 categories for label change request validation against comparator inspection output",
+    "categories": ["text", "symbol", "barcode", "datamatrix", "image"],
     "change_types": [
       "Added",
       "Removed",
@@ -271,6 +271,22 @@
           "name": "Position",
           "attributes": [
             { "id": "bc_second_barcode",   "label": "Second barcode added",       "value_type": "text",   "placeholder": "e.g. QR code added alongside DataMatrix" }
+          ]
+        }
+      ]
+    },
+
+    "datamatrix": {
+      "id": "datamatrix",
+      "label": "DataMatrix",
+      "icon": "dm",
+      "description": "DataMatrix barcode changes — decoded value, printed text, and physical spec",
+      "groups": [
+        {
+          "id": "dm_items",
+          "name": "DataMatrix",
+          "attributes": [
+            { "id": "dm_datamatrix", "label": "DataMatrix", "value_type": "text", "placeholder": "" }
           ]
         }
       ]

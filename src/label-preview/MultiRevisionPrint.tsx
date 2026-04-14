@@ -32,7 +32,7 @@ function matchCount(rev: LabelRevision) {
 }
 
 function computeSummaryData(requirements: Requirement[]) {
-  const catMap: Record<string, string> = { Text: 'text', Symbol: 'symbol', Barcode: 'barcode', Image: 'image' };
+  const catMap: Record<string, string> = { Text: 'text', Symbol: 'symbol', Barcode: 'barcode', DataMatrix: 'barcode', Image: 'image' };
   const ctMap: Record<string, string>  = {
     Deleted: 'deleted', Added: 'added', Modified: 'modified',
     Repositioned: 'misplaced', Misplaced: 'misplaced',

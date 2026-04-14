@@ -42,7 +42,7 @@ function buildRequirements(
       changeType:  item.expectedChange as Requirement['changeType'],
       description: item.label,
       expectedValue: item.expectedValue,
-      actualValue:   item.expectedValue,
+      actualValue:   (item.actualValue && item.actualValue !== '—') ? item.actualValue : item.expectedValue,
       status: 'Match' as const,
     })),
     ...missingItems.map((item) => ({
@@ -51,7 +51,7 @@ function buildRequirements(
       changeType:  item.expectedChange as Requirement['changeType'],
       description: item.label,
       expectedValue: item.expectedValue,
-      actualValue:   '— NOT FOUND —',
+      actualValue:   (item.actualValue && item.actualValue !== '—') ? item.actualValue : '— NOT FOUND —',
       status: 'Mismatch' as const,
     })),
   ];
@@ -60,7 +60,7 @@ function buildRequirements(
 function buildDiscrepancyCategories(parsedItems: any[]): DiscrepancyCategory[] {
   const ORDER = ['Text', 'Symbol', 'Barcode', 'Image'];
   const TITLE: Record<string, string> = {
-    Text: 'TEXT', Symbol: 'SYMBOLS', Barcode: 'BARCODES', Image: 'IMAGE',
+    Text: 'TEXT', Symbol: 'SYMBOLS', Barcode: 'BARCODES', DataMatrix: 'BARCODES', Image: 'IMAGE',
   };
   const map: Record<string, { changeType: any; value: string }[]> = {};
   for (const item of parsedItems) {
@@ -78,7 +78,7 @@ function buildSummaryData(parsedItems: any[]) {
   const empty = () => ({ text: 0, symbol: 0, barcode: 0, image: 0 });
   const data = { deleted: empty(), added: empty(), modified: empty(), misplaced: empty() };
   const catKey: Record<string, keyof ReturnType<typeof empty>> = {
-    Text: 'text', Symbol: 'symbol', Barcode: 'barcode', Image: 'image',
+    Text: 'text', Symbol: 'symbol', Barcode: 'barcode', DataMatrix: 'barcode', Image: 'image',
   };
   const statusKey: Record<string, keyof typeof data> = {
     Deleted: 'deleted', Added: 'added', Modified: 'modified', Repositioned: 'misplaced',

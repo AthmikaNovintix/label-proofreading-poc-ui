@@ -49,13 +49,14 @@ function buildCombinedSummary(data?: ReportData) {
   // Case-insensitive element-type → bucket
   const elOf = (s: string): keyof ReturnType<typeof empty> | undefined => {
     switch (String(s ?? '').toLowerCase()) {
-      case 'text':    return 'text';
+      case 'text':       return 'text';
       case 'symbol':
-      case 'symbols': return 'symbol';
+      case 'symbols':    return 'symbol';
       case 'barcode':
-      case 'barcodes':return 'barcode';
-      case 'image':   return 'image';
-      default:        return undefined;
+      case 'barcodes':
+      case 'datamatrix': return 'barcode';
+      case 'image':      return 'image';
+      default:           return undefined;
     }
   };
   // Case-insensitive change-type → bucket
@@ -87,7 +88,7 @@ function buildCombinedSummary(data?: ReportData) {
 /** Combined Changes Made categories (requirements + discrepancy categories) */
 function buildCombinedCategories(data?: ReportData): DiscrepancyCategory[] {
   const ELEMENT_TITLE: Record<string, string> = {
-    Text: 'TEXT', Symbol: 'SYMBOLS', Barcode: 'BARCODES', Image: 'IMAGE',
+    Text: 'TEXT', Symbol: 'SYMBOLS', Barcode: 'BARCODES', DataMatrix: 'BARCODES', Image: 'IMAGE',
   };
   const ORDER = ['TEXT', 'SYMBOLS', 'BARCODES', 'IMAGE'];
   const map = new Map<string, DiscrepancyCategory['items']>();
@@ -102,7 +103,7 @@ function buildCombinedCategories(data?: ReportData): DiscrepancyCategory[] {
     map.get(cat.title)!.push(...cat.items);
   }
 
-  return ORDER.filter(t => map.has(t)).map(t => ({ title: t, items: map.get(t)! }));
+  return ORDER.filter(t => map.has(t) && map.get(t)!.length > 0).map(t => ({ title: t, items: map.get(t)! }));
 }
 
 // ─── Components ───────────────────────────────────────────────────────────────

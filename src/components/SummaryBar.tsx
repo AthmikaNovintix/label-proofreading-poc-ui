@@ -5,17 +5,19 @@ interface SummaryBarProps {
 }
 
 const chipStyles: Record<CategoryId, string> = {
-  text: "bg-badge-blue text-badge-blue-foreground",
-  symbol: "bg-badge-amber text-badge-amber-foreground",
-  barcode: "bg-badge-green text-badge-green-foreground",
-  image: "bg-badge-rose text-badge-rose-foreground",
+  text:       "bg-badge-blue text-badge-blue-foreground",
+  symbol:     "bg-badge-amber text-badge-amber-foreground",
+  barcode:    "bg-badge-green text-badge-green-foreground",
+  datamatrix: "bg-badge-green text-badge-green-foreground",
+  image:      "bg-badge-rose text-badge-rose-foreground",
 };
 
 const chipLabels: Record<CategoryId, string> = {
-  text: "Text",
-  symbol: "Symbols",
-  barcode: "Barcodes",
-  image: "Images",
+  text:       "Text",
+  symbol:     "Symbols",
+  barcode:    "Barcodes",
+  datamatrix: "DataMatrix",
+  image:      "Images",
 };
 
 const SummaryBar = ({ counts }: SummaryBarProps) => {
